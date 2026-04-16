@@ -845,7 +845,7 @@ function EntryPage({ editDate, onSaved }) {
           </div>
           {msg&&<div className={msg.includes('실패')?'error-msg':'success-msg'} style={{marginTop:10}}>{msg}</div>}
         </div>
-      </div>}
+      </div>
     </div>
   );
 }
@@ -953,7 +953,7 @@ function ProductsPage() {
 
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">상품 관리</div><div className="page-sub">공급사별 상품 정보 저장 및 검색</div></div></div>
+      <div className="page-header"><div><div className="page-title">상품 정보</div><div className="page-sub">공급사별 상품 정보 저장 및 검색</div></div></div>
       <div className="section" style={{paddingBottom:0}}>
         <div style={{display:'flex',gap:8,marginBottom:16}}>
           <TabBtn id="list" label="상품 목록"/>
@@ -1094,7 +1094,7 @@ function App() {
           {[
             {id:'dashboard',label:'대시보드',icon:Icon.dashboard},
             {id:'entry',label:'데이터 입력',icon:Icon.entry},
-            {id:'products',label:'상품 관리',icon:Icon.products},
+            {id:'products',label:'상품 정보',icon:Icon.products},
           ].map(m=>(
             <div key={m.id} className={`nav-item ${page===m.id?'active':''}`} onClick={()=>{setPage(m.id);setEditDate(null);}}>
               {m.icon}{m.label}
@@ -1162,7 +1162,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 
   return (
     <div>
-      <div className="page-header"><div><div className="page-title">상품 관리</div><div className="page-sub">공급사별 상품 정보 저장 및 검색</div></div></div>
+      <div className="page-header"><div><div className="page-title">상품 정보</div><div className="page-sub">공급사별 상품 정보 저장 및 검색</div></div></div>
       <div className="section" style={{paddingBottom:0}}>
         <div style={{display:'flex',gap:8,marginBottom:16}}>
           <TabBtn id="list" label="상품 목록"/>
@@ -1303,7 +1303,7 @@ function App() {
           {[
             {id:'dashboard',label:'대시보드',icon:Icon.dashboard},
             {id:'entry',label:'데이터 입력',icon:Icon.entry},
-            {id:'products',label:'상품 관리',icon:Icon.products},
+            {id:'products',label:'상품 정보',icon:Icon.products},
           ].map(m=>(
             <div key={m.id} className={`nav-item ${page===m.id?'active':''}`} onClick={()=>{setPage(m.id);setEditDate(null);}}>
               {m.icon}{m.label}
