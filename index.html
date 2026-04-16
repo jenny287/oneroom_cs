@@ -208,8 +208,8 @@ function LoginPage() {
     <div className="login-wrap"><div className="login-box">
       <div className="login-logo">Customer Service</div>
       <div className="login-title">운영 대시보드</div>
-      <div className="form-group"><label>이메일</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="이메일 입력"/></div>
-      <div className="form-group"><label>비밀번호</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="비밀번호 입력"/></div>
+      <div className="form-group"><label>이메일</label><input type="email" value={email} onChange={e=/>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="이메일 입력"/></div>
+      <div className="form-group"><label>비밀번호</label><input type="password" value={pw} onChange={e=/>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="비밀번호 입력"/></div>
       <button className="btn-primary" onClick={submit} disabled={loading}>{loading?'로그인 중...':'로그인'}</button>
       {err&&<div className="error-msg">{err}</div>}
     </div></div>
@@ -267,9 +267,9 @@ function DashboardPage() {
       <div className="section">
         <div className="filter-bar">
           <label>기간</label>
-          <input type="date" value={from} onChange={e=>{setFrom(e.target.value);setRange('직접 선택');}}/>
+          <input type="date" value={from} onChange={e=/>{setFrom(e.target.value);setRange('직접 선택');}}/>
           <span style={{color:'var(--sub)'}}>~</span>
-          <input type="date" value={to} onChange={e=>{setTo(e.target.value);setRange('직접 선택');}}/>
+          <input type="date" value={to} onChange={e=/>{setTo(e.target.value);setRange('직접 선택');}}/>
           <select value={range} onChange={onRangeChange} style={{padding:'8px 12px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:'8px',color:'var(--text)',fontSize:'13px',fontFamily:'inherit',outline:'none'}}>
             {RANGE_OPTIONS.map(o=><option key={o.label}>{o.label}</option>)}
           </select>
@@ -470,9 +470,9 @@ function AttendancePage() {
                             style={{width:'100%',padding:'4px 2px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:5,color:STATUS_COLORS[status]||'var(--text)',fontSize:11,fontFamily:'inherit',outline:'none',fontWeight:600}}>
                             {STATUS_LIST.map(s=><option key={s} value={s}>{s}</option>)}
                           </select>
-                          <input type="text" inputMode="decimal" value={ot} onChange={e=>setVal(d,a.name,'ot_hours',e.target.value)} placeholder="OT"
+                          <input type="text" inputMode="decimal" value={ot} onChange={e=/>setVal(d,a.name,'ot_hours',e.target.value)} placeholder="OT"
                             style={{width:'100%',marginTop:2,padding:'3px 4px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:5,color:'var(--yellow)',fontSize:11,fontFamily:'inherit',outline:'none',textAlign:'center'}}/>
-                          {status==='기타'&&<input type="text" value={getVal(d,a.name,'note')} onChange={e=>setVal(d,a.name,'note',e.target.value)} placeholder="내용"
+                          {status==='기타'&&<input type="text" value={getVal(d,a.name,'note')} onChange={e=/>setVal(d,a.name,'note',e.target.value)} placeholder="내용"
                             style={{width:'100%',marginTop:2,padding:'3px 4px',background:'var(--bg)',border:'1px solid var(--primary)',borderRadius:5,color:'var(--text)',fontSize:10,fontFamily:'inherit',outline:'none'}}/>}
                         </td>);
                       })}
@@ -578,7 +578,7 @@ function AgentListTab() {
             <div className="agent-mgmt-item" key={a.id}>
               <div style={{width:24,color:'var(--sub)',fontSize:12}}>{i+1}</div>
               {editId===a.id
-                ? <input className="agent-mgmt-input" value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEdit(a.id)} autoFocus/>
+                ? <input className="agent-mgmt-input" value={editName} onChange={e=/>setEditName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEdit(a.id)} autoFocus/>
                 : <div className="agent-mgmt-name">{a.name}</div>
               }
               {editId===a.id
@@ -590,7 +590,7 @@ function AgentListTab() {
         </div>}
         <div className="entry-section-title" style={{marginTop:24}}>상담원 추가</div>
         <div className="add-agent-row">
-          <input className="add-agent-input" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="상담원 이름 입력" onKeyDown={e=>e.key==='Enter'&&add()}/>
+          <input className="add-agent-input" value={newName} onChange={e=/>setNewName(e.target.value)} placeholder="상담원 이름 입력" onKeyDown={e=>e.key==='Enter'&&add()}/>
           <button className="btn-add" onClick={add}>추가</button>
         </div>
         {msg&&<div className="error-msg" style={{marginTop:8,textAlign:'left'}}>{msg}</div>}
@@ -789,14 +789,14 @@ function EntryPage({ editDate, onSaved }) {
           {/* 날짜 정보 */}
           <div className="entry-section-title">날짜 정보</div>
           <div className="entry-grid">
-            <div className="entry-field"><label>날짜</label><input type="date" value={ops.date||''} onChange={e=>setOpsF('date',e.target.value)}/></div>
+            <div className="entry-field"><label>날짜</label><input type="date" value={ops.date||''} onChange={e=/>setOpsF('date',e.target.value)}/></div>
           </div>
 
           {/* 유선 현황 */}
           <div className="entry-section-title">유선 현황</div>
           <div className="entry-grid-3">
             {[{label:'인입호',k:'inbound_calls'},{label:'요청호',k:'request_calls'},{label:'응대호',k:'answered_calls'},{label:'OB컨택호',k:'ob_contacts'},{label:'총 IN 통화시간',k:'in_call_time',ph:'예: 02:30:00'},{label:'총 OUT 통화시간',k:'out_call_time',ph:'예: 01:15:00'}].map(f=>(
-              <div className="entry-field" key={f.k}><label>{f.label}</label><input type="text" inputMode="numeric" value={ops[f.k]||''} onChange={e=>setOpsF(f.k,e.target.value)} placeholder={f.ph||''}/></div>
+              <div className="entry-field" key={f.k}><label>{f.label}</label><input type="text" inputMode="numeric" value={ops[f.k]||''} onChange={e=/>setOpsF(f.k,e.target.value)} placeholder={f.ph||''}/></div>
             ))}
             <div className="entry-field"><label>응대율 (자동계산)</label><input type="text" value={autoRR?autoRR+'%':'요청호/응대호 입력 시 자동계산'} readOnly/></div>
           </div>
@@ -820,10 +820,10 @@ function EntryPage({ editDate, onSaved }) {
                   {registeredAgents.map(a=>(
                     <tr key={a.id}>
                       <td className="agent-name-cell">{a.name}</td>
-                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'answered')} onChange={e=>setAD(a.id,'answered',e.target.value)}/></td>
-                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'ob')} onChange={e=>setAD(a.id,'ob',e.target.value)}/></td>
-                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'board')} onChange={e=>setAD(a.id,'board',e.target.value)}/></td>
-                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'chat')} onChange={e=>setAD(a.id,'chat',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'answered')} onChange={e=/>setAD(a.id,'answered',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'ob')} onChange={e=/>setAD(a.id,'ob',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'board')} onChange={e=/>setAD(a.id,'board',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'chat')} onChange={e=/>setAD(a.id,'chat',e.target.value)}/></td>
                       <td><input type="text" value={calcUph({answered:getAD(a.id,'answered'),board:getAD(a.id,'board'),chat:getAD(a.id,'chat')})||'-'} readOnly/></td>
                     </tr>
                   ))}
@@ -947,7 +947,7 @@ function ProductsPage() {
   const Field = ({label,k,ph='',type='text',full=false}) => (
     <div className="entry-field" style={full?{gridColumn:'1/-1'}:{}}>
       <label>{label}</label>
-      <input type={type} inputMode={type==='number'?'numeric':'text'} value={form[k]||''} onChange={e=>setF(k,e.target.value)} placeholder={ph}/>
+      <input type={type} inputMode={type==='number'?'numeric':'text'} value={form[k]||''} onChange={e=/>setF(k,e.target.value)} placeholder={ph}/>
     </div>
   );
 
@@ -971,7 +971,7 @@ function ProductsPage() {
               <option value="supplier">공급사</option>
               <option value="product">상품명</option>
             </select>
-            <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="검색어 입력..."
+            <input type="text" value={search} onChange={e=/>setSearch(e.target.value)} placeholder="검색어 입력..."
               style={{flex:1,minWidth:200,padding:'8px 12px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',fontSize:13,fontFamily:'inherit',outline:'none'}}/>
             <button className="btn-filter" onClick={()=>{setForm({...EMPTY_PRODUCT});setEditId(null);setTab('add');}}>+ 상품 등록</button>
           </div>
@@ -1156,7 +1156,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   const Field = ({label,k,ph='',type='text',full=false}) => (
     <div className="entry-field" style={full?{gridColumn:'1/-1'}:{}}>
       <label>{label}</label>
-      <input type={type} inputMode={type==='number'?'numeric':'text'} value={form[k]||''} onChange={e=>setF(k,e.target.value)} placeholder={ph}/>
+      <input type={type} inputMode={type==='number'?'numeric':'text'} value={form[k]||''} onChange={e=/>setF(k,e.target.value)} placeholder={ph}/>
     </div>
   );
 
@@ -1180,7 +1180,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
               <option value="supplier">공급사</option>
               <option value="product">상품명</option>
             </select>
-            <input type="text" value={search} onChange={e=>setSearch(e.target.value)} placeholder="검색어 입력..."
+            <input type="text" value={search} onChange={e=/>setSearch(e.target.value)} placeholder="검색어 입력..."
               style={{flex:1,minWidth:200,padding:'8px 12px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',fontSize:13,fontFamily:'inherit',outline:'none'}}/>
             <button className="btn-filter" onClick={()=>{setForm({...EMPTY_PRODUCT});setEditId(null);setTab('add');}}>+ 상품 등록</button>
           </div>
