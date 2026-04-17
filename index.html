@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>고객센터 운영 대시보드</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      --bg:#0d1628; --surface:#111e38; --card:#162244; --border:#1e3060;
+      --primary:#2A478D; --primary2:#1e3570; --green:#22d3a0;
+      --red:#f87171; --yellow:#F6AD09; --accent:#D2E5FF; --gray:#545454;
+      --text:#e8edf8; --sub:#8fa8d0; --hover:#1a2e55;
+    }
+    body { font-family:'Pretendard','Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+    ::-webkit-scrollbar{width:5px;height:5px} ::-webkit-scrollbar-track{background:var(--bg)} ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+    /* 캘린더 아이콘 흰색 */
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(2);
+      cursor: pointer;
+      opacity: .8;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+
+    .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 60% 30%,#1a2e5a 0%,var(--bg) 65%)}
+    .login-box{width:380px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:44px 40px}
+    .login-logo{font-size:13px;font-weight:600;color:var(--primary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+    .login-title{font-size:24px;font-weight:700;margin-bottom:32px}
+    .form-group{margin-bottom:18px}
+    .form-group label{display:block;font-size:12px;font-weight:600;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px}
+    .form-group input{width:100%;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+    .form-group input:focus{border-color:var(--primary)}
+    .btn-primary{width:100%;padding:12px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;transition:background .2s;font-family:inherit}
+    .btn-primary:hover{background:var(--primary2)} .btn-primary:disabled{opacity:.5;cursor:not-allowed}
+    .error-msg{color:var(--red);font-size:12px;margin-top:10px;text-align:center}
+
+    .app-wrap{display:flex;min-height:100vh}
+    .sidebar{width:220px;min-height:100vh;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+    .sidebar-logo{padding:24px 20px 20px;font-size:11px;font-weight:700;color:var(--primary);letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--border)}
+    .sidebar-logo span{display:block;font-size:16px;color:var(--text);margin-top:2px;letter-spacing:0}
+    .sidebar-nav{padding:16px 12px;flex:1}
+    .nav-section{font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.1em;text-transform:uppercase;padding:0 8px;margin:16px 0 6px}
+    .nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;font-size:13px;font-weight:500;color:var(--sub);cursor:pointer;transition:all .15s;margin-bottom:2px}
+    .nav-item:hover{background:var(--hover);color:var(--text)} .nav-item.active{background:rgba(79,142,247,.15);color:var(--primary)}
+    .sidebar-bottom{padding:16px 12px;border-top:1px solid var(--border)}
+    .user-info{display:flex;align-items:center;gap:10px;padding:10px 12px}
+    .user-avatar{width:30px;height:30px;border-radius:50%;background:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+    .user-email{font-size:11px;color:var(--sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .btn-logout{width:100%;padding:9px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--sub);font-size:12px;cursor:pointer;margin-top:8px;font-family:inherit;transition:all .15s}
+    .btn-logout:hover{border-color:var(--red);color:var(--red)}
+    .main{flex:1;overflow-x:hidden}
+    .page-header{padding:28px 32px 0;display:flex;align-items:center;justify-content:space-between}
+    .page-title{font-size:20px;font-weight:700} .page-sub{font-size:13px;color:var(--sub);margin-top:2px}
+    .section{padding:24px 32px}
+    .divider{height:1px;background:var(--border);margin:0 32px}
+    .loading{text-align:center;padding:40px;color:var(--sub)}
+    .empty-state{text-align:center;padding:60px 20px;color:var(--sub);font-size:14px}
+
+    /* FILTER BAR */
+    .filter-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .filter-bar label{font-size:12px;color:var(--sub)}
+    .filter-bar input,.filter-bar select{padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:13px;font-family:inherit;outline:none}
+    .filter-bar select option{background:var(--card)}
+    .btn-filter{padding:8px 16px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+    .btn-sm{padding:7px 14px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--sub);font-size:12px;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-sm:hover{border-color:var(--text);color:var(--text)}
+
+    /* KPI + CHARTS */
+    .kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}
+    .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+    .kpi-label{font-size:11px;font-weight:600;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px}
+    .kpi-value{font-size:26px;font-weight:700;line-height:1}
+    .kpi-value.green{color:var(--green)} .kpi-value.red{color:var(--red)} .kpi-value.blue{color:var(--accent)}
+    .charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+    @media(max-width:1100px){.charts-grid{grid-template-columns:1fr}}
+    .chart-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px}
+    .chart-card.full{grid-column:1/-1}
+    .chart-title{font-size:13px;font-weight:600;color:var(--sub);margin-bottom:16px}
+    .chart-wrap{position:relative;height:220px}
+
+    /* ENTRY */
+    .entry-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:28px;max-width:920px}
+    .entry-section-title{font-size:13px;font-weight:700;color:var(--accent);letter-spacing:.06em;text-transform:uppercase;margin:24px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+    .entry-section-title:first-child{margin-top:0}
+    .entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .entry-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+    @media(max-width:700px){.entry-grid,.entry-grid-3{grid-template-columns:1fr}}
+    .entry-field label{display:block;font-size:12px;font-weight:600;color:var(--sub);margin-bottom:6px}
+    .entry-field input{width:100%;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none;transition:border-color .2s}
+    .entry-field input:focus{border-color:var(--primary)}
+    .entry-field input[readonly]{color:var(--green);background:rgba(34,211,160,.05);border-color:rgba(34,211,160,.2);cursor:default}
+
+    /* AGENT TABLE */
+    .agent-table{width:100%;border-collapse:collapse;font-size:13px}
+    .agent-table th{text-align:left;padding:8px 10px;font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.05em;background:var(--bg);border-bottom:1px solid var(--border);white-space:nowrap}
+    .agent-table td{padding:5px 5px}
+    .agent-table .agent-name-cell{padding:8px 10px;color:var(--text);font-weight:500;font-size:13px}
+    .agent-table input{width:100%;padding:8px 10px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:border-color .2s}
+    .agent-table input:focus{border-color:var(--primary)}
+    .agent-table input[readonly]{color:var(--green);background:rgba(34,211,160,.05);border-color:rgba(34,211,160,.2);text-align:center;cursor:default}
+    .agent-summary{display:flex;gap:20px;flex-wrap:wrap;padding:12px 10px;background:var(--bg);border-radius:8px;margin-top:10px;font-size:12px;color:var(--sub)}
+    .agent-summary span{color:var(--text);font-weight:600}
+
+    /* UPLOAD */
+    .upload-area{display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:20px;background:var(--bg);border:1px dashed var(--border);border-radius:10px;margin-bottom:16px}
+    .btn-upload{padding:10px 18px;background:rgba(79,142,247,.12);border:1px solid var(--primary);border-radius:8px;color:var(--primary);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-upload:hover{background:rgba(79,142,247,.22)}
+    .btn-template{padding:10px 18px;background:rgba(34,211,160,.1);border:1px solid var(--green);border-radius:8px;color:var(--green);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-template:hover{background:rgba(34,211,160,.2)}
+    .upload-desc{font-size:12px;color:var(--sub);line-height:1.6}
+    .upload-result{padding:10px 14px;border-radius:8px;font-size:13px;margin-top:8px}
+    .upload-result.ok{background:rgba(34,211,160,.1);color:var(--green)}
+    .upload-result.err{background:rgba(248,113,113,.1);color:var(--red)}
+
+    .entry-actions{display:flex;gap:12px;margin-top:24px}
+    .btn-save{padding:11px 28px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:background .2s}
+    .btn-save:hover{background:var(--primary2)} .btn-save:disabled{opacity:.5;cursor:not-allowed}
+    .btn-cancel{padding:11px 20px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--sub);font-size:14px;cursor:pointer;font-family:inherit;transition:all .15s}
+    .btn-cancel:hover{border-color:var(--text);color:var(--text)}
+    .success-msg{color:var(--green);font-size:13px;margin-top:10px}
+
+    /* AGENT MANAGEMENT */
+    .agent-mgmt-list{display:flex;flex-direction:column;gap:10px;max-width:500px}
+    .agent-mgmt-item{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--bg);border:1px solid var(--border);border-radius:10px}
+    .agent-mgmt-name{flex:1;font-size:14px;font-weight:500}
+    .agent-mgmt-input{flex:1;padding:8px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none}
+    .agent-mgmt-input:focus{border-color:var(--primary)}
+    .btn-icon{padding:6px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit}
+    .btn-icon.edit{background:rgba(79,142,247,.15);color:var(--primary)}
+    .btn-icon.del{background:rgba(248,113,113,.12);color:var(--red)}
+    .btn-icon.save{background:rgba(34,211,160,.12);color:var(--green)}
+    .btn-icon.cancel{background:rgba(122,143,187,.1);color:var(--sub)}
+    .add-agent-row{display:flex;gap:10px;align-items:center;max-width:500px;margin-top:12px}
+    .add-agent-input{flex:1;padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;font-family:inherit;outline:none}
+    .add-agent-input:focus{border-color:var(--primary)}
+    .btn-add{padding:10px 18px;background:var(--primary);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+
+    /* HISTORY */
+    .table-wrap{overflow-x:auto}
+    table.hist{width:100%;border-collapse:collapse;font-size:13px}
+    table.hist thead th{text-align:left;padding:10px 14px;font-size:11px;font-weight:700;color:var(--sub);letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap}
+    table.hist tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+    table.hist tbody tr:hover{background:var(--hover)}
+    table.hist tbody td{padding:11px 14px;color:var(--text);white-space:nowrap}
+    .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600}
+    .badge-green{background:rgba(34,211,160,.15);color:var(--green)} .badge-red{background:rgba(248,113,113,.15);color:var(--red)}
+    .btn-edit{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;background:rgba(42,71,141,.15);color:#D2E5FF;margin-right:6px}
+    .btn-delete{padding:5px 12px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;background:rgba(248,113,113,.12);color:var(--red)}
+    .agent-badge{display:inline-block;padding:2px 7px;background:rgba(29,158,117,.18);color:#22d3a0);border-radius:4px;font-size:11px;margin-right:4px;margin-bottom:2px}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+// ✏️ Supabase 정보 입력
+const SUPABASE_URL      = 'https://iasnxjbqhzxpgguhynuo.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlhc254amJxaHp4cGdndWh5bnVvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyMDY2MzUsImV4cCI6MjA5MTc4MjYzNX0.6nlwaNqmTd7lZKhOeFo9OJsa2MhXC_xmKY9HFL8nv50';
+
+const { createClient } = supabase;
+const { useState, useEffect, useRef, useCallback } = React;
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const COLORS = ['#4f8ef7','#22d3a0','#fbbf24','#f87171','#a78bfa','#fb923c','#34d399','#60a5fa'];
+
+const Icon = {
+  dashboard: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+  entry:     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
+  history:   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
+  agents:    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+  attendance:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><polyline points="9 16 11 18 15 14"/></svg>,
+  products:  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>,
+};
+
+function ChartComp({ type, data, options }) {
+  const ref = useRef(null); const chartRef = useRef(null);
+  useEffect(() => {
+    if (!ref.current) return;
+    if (chartRef.current) chartRef.current.destroy();
+    chartRef.current = new Chart(ref.current, { type, data, options });
+    return () => chartRef.current?.destroy();
+  }, [JSON.stringify(data)]);
+  return <canvas ref={ref} />;
+}
+
+const BASE_OPTS  = { plugins:{legend:{labels:{color:'#7a8fbb',font:{size:11},boxWidth:10}}}, scales:{x:{ticks:{color:'#7a8fbb',font:{size:10}},grid:{color:'#243050'}},y:{ticks:{color:'#7a8fbb',font:{size:10}},grid:{color:'#243050'}}}, maintainAspectRatio:false, responsive:true };
+const STACK_OPTS = { ...BASE_OPTS, scales:{...BASE_OPTS.scales, x:{...BASE_OPTS.scales.x,stacked:true}, y:{...BASE_OPTS.scales.y,stacked:true}} };
+
+const fmt    = (v,d=1) => v!=null ? Number(v).toFixed(d) : '0';
+const fmtPct = v => v!=null ? Number(v).toFixed(1)+'%' : '-';
+const calcUph = a => { const t=(Number(a.answered)||0)+(Number(a.board)||0)+(Number(a.chat)||0); return t>0?(t/8).toFixed(2):''; };
+const calcRR  = ops => { const req=Number(ops.request_calls)||0, ans=Number(ops.answered_calls)||0; return req?((ans/req)*100).toFixed(1):''; };
+
+const dateOffset = days => { const d=new Date(); d.setDate(d.getDate()-days); return d.toISOString().slice(0,10); };
+const today = () => new Date().toISOString().slice(0,10);
+
+// ── LOGIN ──────────────────────────────────────
+function LoginPage() {
+  const [email,setEmail]=useState(''); const [pw,setPw]=useState(''); const [err,setErr]=useState(''); const [loading,setLoading]=useState(false);
+  const submit=async()=>{ setErr('');setLoading(true); const{error}=await sb.auth.signInWithPassword({email,password:pw}); if(error)setErr('이메일 또는 비밀번호가 올바르지 않습니다.'); setLoading(false); };
+  return (
+    <div className="login-wrap"><div className="login-box">
+      <div className="login-logo">Customer Service</div>
+      <div className="login-title">운영 대시보드</div>
+      <div className="form-group"><label>이메일</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="이메일 입력"/></div>
+      <div className="form-group"><label>비밀번호</label><input type="password" value={pw} onChange={e=>setPw(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} placeholder="비밀번호 입력"/></div>
+      <button className="btn-primary" onClick={submit} disabled={loading}>{loading?'로그인 중...':'로그인'}</button>
+      {err&&<div className="error-msg">{err}</div>}
+    </div></div>
+  );
+}
+
+// ── DASHBOARD ──────────────────────────────────
+const RANGE_OPTIONS = [
+  {label:'직접 선택',days:null},{label:'최근 7일',days:7},{label:'최근 14일',days:14},
+  {label:'최근 한달',days:30},{label:'3개월',days:90},{label:'6개월',days:180},{label:'1년',days:365},
+];
+const getMonthRange = (y,m) => {
+  const pad = n=>String(n).padStart(2,'0');
+  const last = new Date(y,m,0).getDate();
+  return {from:`${y}-${pad(m)}-01`, to:`${y}-${pad(m)}-${pad(last)}`};
+};
+
+function DashboardPage() {
+  const [ops,setOps]=useState([]); const [agentOps,setAgentOps]=useState([]);
+  const [from,setFrom]=useState(dateOffset(30)); const [to,setTo]=useState(today());
+  const [range,setRange]=useState('최근 한달'); const [loading,setLoading]=useState(true);
+  const [dashTab,setDashTab]=useState('period');
+  const [ymYear,setYmYear]=useState(String(new Date().getFullYear()));
+  const [ymFrom,setYmFrom]=useState('1'); const [ymTo,setYmTo]=useState(String(new Date().getMonth()+1));
+
+  const PERIOD_OPTIONS=[
+    {label:'최근 한달',days:30},{label:'최근 3개월',days:90},
+    {label:'최근 6개월',days:180},{label:'최근 1년',days:365},
+  ];
+  const QUICK=[
+    {label:'전체 (1~12월)',f:1,t:12},{label:'상반기 (1~6월)',f:1,t:6},
+    {label:'하반기 (7~12월)',f:7,t:12},{label:'1분기 (1~3월)',f:1,t:3},
+    {label:'2분기 (4~6월)',f:4,t:6},{label:'3분기 (7~9월)',f:7,t:9},
+    {label:'4분기 (10~12월)',f:10,t:12},
+  ];
+
+  const pad=n=>String(n).padStart(2,'0');
+
+  const loadPeriod=async(f,t)=>{
+    setLoading(true);
+    let q1=sb.from('daily_ops').select('*').order('date',{ascending:true});
+    let q2=sb.from('agent_daily_ops').select('*').order('date',{ascending:true});
+    if(f){q1=q1.gte('date',f);q2=q2.gte('date',f);}
+    if(t){q1=q1.lte('date',t);q2=q2.lte('date',t);}
+    const[r1,r2]=await Promise.all([q1,q2]);
+    setOps(r1.data||[]); setAgentOps(r2.data||[]); setLoading(false);
+  };
+
+  useEffect(()=>{loadPeriod(from,to);},[]);
+
+  const onRangeChange=e=>{
+    const sel=e.target.value; setRange(sel);
+    const opt=PERIOD_OPTIONS.find(o=>o.label===sel);
+    if(opt){const f=dateOffset(opt.days),t=today();setFrom(f);setTo(t);}
+  };
+
+  const load=()=>{
+    if(dashTab==='period'){
+      loadPeriod(from,to);
+    } else {
+      if(!ymYear) return;
+      const f=`${ymYear}-${pad(ymFrom)}-01`;
+      const lastDay=new Date(Number(ymYear),Number(ymTo),0).getDate();
+      const t=`${ymYear}-${pad(ymTo)}-${pad(lastDay)}`;
+      loadPeriod(f,t);
+    }
+  };
+
+  const applyQuick=(f,t)=>{setYmFrom(String(f));setYmTo(String(t));};
+
+  // 월별 집계용
+  const months=Array.from({length:12},(_,i)=>i+1);
+  const selectedMonths=months.filter(m=>m>=Number(ymFrom)&&m<=Number(ymTo));
+  const isYearMonth=dashTab==='yearmonth';
+
+  const dates=[...new Set([...ops.map(r=>r.date),...agentOps.map(r=>r.date)])].sort();
+  const agents=[...new Set(agentOps.map(r=>r.agent_name))].sort();
+
+  const byDate=(arr,key)=>dates.map(d=>arr.filter(r=>r.date===d).reduce((s,r)=>s+(Number(r[key])||0),0));
+  const byMonthData=(arr,key)=>selectedMonths.map(m=>{
+    const ms=pad(m);
+    return arr.filter(r=>r.date?.slice(5,7)===ms).reduce((s,r)=>s+(Number(r[key])||0),0);
+  });
+  const byMonthAvg=(arr,key)=>selectedMonths.map(m=>{
+    const ms=pad(m);const rows=arr.filter(r=>r.date?.slice(5,7)===ms);
+    return rows.length?rows.reduce((s,r)=>s+(Number(r[key])||0),0)/rows.length:0;
+  });
+
+  const chartLabels   = isYearMonth?selectedMonths.map(m=>m+'월'):ops.map(r=>r.date?.slice(5));
+  const opsInbound    = isYearMonth?byMonthData(ops,'inbound_calls') :ops.map(r=>r.inbound_calls);
+  const opsRequest    = isYearMonth?byMonthData(ops,'request_calls') :ops.map(r=>r.request_calls);
+  const opsAnswered   = isYearMonth?byMonthData(ops,'answered_calls'):ops.map(r=>r.answered_calls);
+  const opsOb         = isYearMonth?byMonthData(ops,'ob_contacts')   :ops.map(r=>r.ob_contacts);
+  const opsRR         = isYearMonth?byMonthAvg(ops,'response_rate')  :ops.map(r=>r.response_rate);
+  const totalAnswered = isYearMonth?byMonthData(agentOps,'answered_calls'):byDate(agentOps,'answered_calls');
+  const totalBoard    = isYearMonth?byMonthData(agentOps,'board_count')   :byDate(agentOps,'board_count');
+  const totalChat     = isYearMonth?byMonthData(agentOps,'chat_count')    :byDate(agentOps,'chat_count');
+  const avgUph        = isYearMonth
+    ?selectedMonths.map(m=>{const ms=pad(m);const rows=agentOps.filter(r=>r.date?.slice(5,7)===ms);return rows.length?rows.reduce((s,r)=>s+(Number(r.uph)||0),0)/rows.length:0;})
+    :dates.map(d=>{const rows=agentOps.filter(r=>r.date===d);return rows.length?rows.reduce((s,r)=>s+(Number(r.uph)||0),0)/rows.length:0;});
+
+  const mean=arr=>arr.filter(v=>v!=null&&v!=='').length?arr.filter(v=>v!=null&&v!=='').reduce((a,b)=>a+(Number(b)||0),0)/arr.filter(v=>v!=null&&v!=='').length:0;
+  const avgRR=ops.length?ops.reduce((s,r)=>s+(Number(r.response_rate)||0),0)/ops.length:0;
+
+  const tabStyle=(active)=>({padding:'10px 24px',fontSize:13,fontWeight:600,cursor:'pointer',border:'none',background:'none',
+    fontFamily:'inherit',color:active?'var(--accent)':'var(--sub)',borderBottom:active?'2px solid var(--primary)':'2px solid transparent'});
+  const selStyle={padding:'8px 10px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:'8px',color:'var(--text)',fontSize:'13px',fontFamily:'inherit',outline:'none'};
+
+  return (
+    <div>
+      <div className="page-header"><div><div className="page-title">대시보드</div><div className="page-sub">고객센터 운영 현황</div></div></div>
+      <div style={{display:'flex',borderBottom:'1px solid var(--border)',paddingLeft:24}}>
+        <button style={tabStyle(dashTab==='period')} onClick={()=>setDashTab('period')}>일 별</button>
+        <button style={tabStyle(dashTab==='yearmonth')} onClick={()=>setDashTab('yearmonth')}>연/월 별</button>
+      </div>
+      <div className="section">
+        <div className="filter-bar">
+          {dashTab==='period'&&<>
+            <label>기간</label>
+            <input type="date" value={from} onChange={e=>{setFrom(e.target.value);setRange('직접 선택');}}/>
+            <span style={{color:'var(--sub)'}}>~</span>
+            <input type="date" value={to} onChange={e=>{setTo(e.target.value);setRange('직접 선택');}}/>
+            <select value={range} onChange={onRangeChange} style={selStyle}>
+              <option value="직접 선택">직접 선택</option>
+              {PERIOD_OPTIONS.map(o=><option key={o.label}>{o.label}</option>)}
+            </select>
+          </>}
+          {dashTab==='yearmonth'&&<>
+            <label style={{fontSize:'12px',color:'var(--sub)'}}>연도</label>
+            <select value={ymYear} onChange={e=>setYmYear(e.target.value)} style={selStyle}>
+              {[2024,2025,2026,2027].map(y=><option key={y} value={y}>{y}년</option>)}
+            </select>
+            <label style={{fontSize:'12px',color:'var(--sub)'}}>월 범위</label>
+            <select value={ymFrom} onChange={e=>setYmFrom(e.target.value)} style={{...selStyle,width:75}}>
+              {Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{m}월</option>)}
+            </select>
+            <span style={{color:'var(--sub)'}}>~</span>
+            <select value={ymTo} onChange={e=>setYmTo(e.target.value)} style={{...selStyle,width:75}}>
+              {Array.from({length:12},(_,i)=>i+1).map(m=><option key={m} value={m}>{m}월</option>)}
+            </select>
+          </>}
+          <button className="btn-filter" onClick={load}>조회</button>
+          <button className="btn-sm" onClick={()=>{setFrom('');setTo('');setRange('직접 선택');setYmFrom('1');setYmTo(String(new Date().getMonth()+1));}}>초기화</button>
+        </div>
+        {dashTab==='yearmonth'&&(
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',marginTop:10}}>
+            {QUICK.map(q=>(
+              <button key={q.label} onClick={()=>applyQuick(q.f,q.t)}
+                style={{padding:'4px 12px',borderRadius:6,border:'1px solid var(--border)',background:Number(ymFrom)===q.f&&Number(ymTo)===q.t?'rgba(42,71,141,.3)':'transparent',
+                  color:Number(ymFrom)===q.f&&Number(ymTo)===q.t?'var(--accent)':'var(--sub)',fontSize:11,cursor:'pointer',fontFamily:'inherit',
+                  borderColor:Number(ymFrom)===q.f&&Number(ymTo)===q.t?'var(--primary)':'var(--border)'}}>
+                {q.label}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="divider"/>
+      {loading?<div className="loading">불러오는 중...</div>:<>
+      <div className="section">
+        <div className="kpi-grid">
+          {[
+            {label:'평균 응대율',value:fmtPct(avgRR),cls:avgRR>=90?'green':'red'},
+            {label:isYearMonth?'월평균 응대호':'일평균 응대호',value:fmt(mean(totalAnswered),0),cls:'blue'},
+            {label:isYearMonth?'월평균 게시판':'일평균 게시판',value:fmt(mean(totalBoard),0),cls:''},
+            {label:isYearMonth?'월평균 채팅':'일평균 채팅',value:fmt(mean(totalChat),0),cls:''},
+            {label:'평균 UPH',value:fmt(mean(avgUph),1),cls:''},
+            {label:'상담원 수',value:agents.length+'명',cls:''},
+          ].map(k=>(
+            <div className="kpi-card" key={k.label}><div className="kpi-label">{k.label}</div><div className={`kpi-value ${k.cls}`}>{k.value}</div></div>
+          ))}
+        </div>
+      </div>
+      <div className="section" style={{paddingTop:0}}>
+        <div className="charts-grid">
+          <div className="chart-card"><div className="chart-title">{isYearMonth?'유선 현황 (월별)':'유선 현황 (일별)'}</div><div className="chart-wrap">
+            <ChartComp type="line" options={BASE_OPTS} data={{labels:chartLabels,datasets:[
+              {label:'인입호',data:opsInbound,borderColor:COLORS[0],backgroundColor:'transparent',tension:.3,pointRadius:2},
+              {label:'요청호',data:opsRequest,borderColor:COLORS[1],backgroundColor:'transparent',tension:.3,pointRadius:2},
+              {label:'응대호',data:opsAnswered,borderColor:COLORS[2],backgroundColor:'transparent',tension:.3,pointRadius:2},
+              {label:'OB컨택',data:opsOb,borderColor:COLORS[3],backgroundColor:'transparent',tension:.3,pointRadius:2},
+            ]}}/>
+          </div></div>
+          <div className="chart-card"><div className="chart-title">{isYearMonth?'응대율 추이 (월별 %)':'응대율 추이 (%)'}</div><div className="chart-wrap">
+            <ChartComp type="line" options={{...BASE_OPTS,scales:{...BASE_OPTS.scales,y:{...BASE_OPTS.scales.y,ticks:{...BASE_OPTS.scales.y.ticks,callback:v=>v+'%'}}}}} data={{labels:chartLabels,datasets:[
+              {label:'응대율',data:opsRR,borderColor:COLORS[0],backgroundColor:'transparent',tension:.3,pointRadius:2},
+            ]}}/>
+          </div></div>
+          <div className="chart-card"><div className="chart-title">{isYearMonth?'채널별 처리 현황 (월별 합계)':'채널별 처리 현황 (일별 합계)'}</div><div className="chart-wrap">
+            <ChartComp type="bar" options={STACK_OPTS} data={{labels:chartLabels,datasets:[
+              {label:'응대호',data:totalAnswered,backgroundColor:COLORS[0]},
+              {label:'게시판',data:totalBoard,backgroundColor:COLORS[1]},
+              {label:'채팅',data:totalChat,backgroundColor:COLORS[2]},
+            ]}}/>
+          </div></div>
+          {agents.length>0&&<div className="chart-card"><div className="chart-title">상담원별 처리 합계</div><div className="chart-wrap">
+            <ChartComp type="bar" options={STACK_OPTS} data={{labels:agents,datasets:[
+              {label:'응대호',data:agents.map(a=>agentOps.filter(r=>r.agent_name===a).reduce((s,r)=>s+(Number(r.answered_calls)||0),0)),backgroundColor:COLORS[0]},
+              {label:'게시판',data:agents.map(a=>agentOps.filter(r=>r.agent_name===a).reduce((s,r)=>s+(Number(r.board_count)||0),0)),backgroundColor:COLORS[1]},
+              {label:'채팅',  data:agents.map(a=>agentOps.filter(r=>r.agent_name===a).reduce((s,r)=>s+(Number(r.chat_count)||0),0)),backgroundColor:COLORS[2]},
+              {label:'OB',   data:agents.map(a=>agentOps.filter(r=>r.agent_name===a).reduce((s,r)=>s+(Number(r.ob_count)||0),0)),backgroundColor:COLORS[3]},
+            ]}}/>
+          </div></div>}
+          {agents.length>0&&<div className="chart-card full"><div className="chart-title">{isYearMonth?'상담원별 월별 응대호 추이':'상담원별 일별 응대호 추이'}</div><div className="chart-wrap">
+            <ChartComp type="line" options={BASE_OPTS} data={{labels:chartLabels,datasets:agents.map((a,i)=>({
+              label:a,
+              data:isYearMonth
+                ?selectedMonths.map(m=>{const ms=pad(m);return agentOps.filter(r=>r.agent_name===a&&r.date?.slice(5,7)===ms).reduce((s,r)=>s+(Number(r.answered_calls)||0),0);})
+                :dates.map(d=>agentOps.filter(r=>r.agent_name===a&&r.date===d).reduce((s,r)=>s+(Number(r.answered_calls)||0),0)),
+              borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',tension:.3,pointRadius:2,
+            }))}}/>
+          </div></div>}
+        </div>
+      </div>
+      </>}
+    </div>
+  );
+}
+
+// ── ATTENDANCE PAGE ────────────────────────────
+const STATUS_LIST = ['근무','연차','오전반차','오후반차','기타'];
+const STATUS_COLORS = {'근무':'var(--green)','연차':'var(--red)','오전반차':'var(--yellow)','오후반차':'var(--yellow)','기타':'var(--sub)'};
+
+function AttendancePage() {
+  const today = new Date();
+  const [year,  setYear]  = useState(today.getFullYear());
+  const [month, setMonth] = useState(today.getMonth()+1);
+  const [agents, setAgents] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [edits, setEdits] = useState({});
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState('');
+  const [tab, setTab] = useState('input');
+
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const days = Array.from({length:daysInMonth},(_,i)=>i+1);
+  const pad = n => String(n).padStart(2,'0');
+  const dateStr = d => year+'-'+pad(month)+'-'+pad(d);
+
+  const load = async () => {
+    const [r1,r2] = await Promise.all([
+      sb.from('agents').select('*').order('sort_order').order('created_at'),
+      sb.from('attendance').select('*').gte('date',dateStr(1)).lte('date',dateStr(daysInMonth)),
+    ]);
+    setAgents(r1.data||[]);
+    setRecords(r2.data||[]);
+    setEdits({});
+  };
+  useEffect(()=>{ load(); },[year,month]);
+
+  const recMap = {};
+  records.forEach(r=>{ recMap[r.date+'_'+r.agent_name]=r; });
+
+  const getVal = (d,name,field) => {
+    const k=dateStr(d)+'_'+name;
+    if(edits[k]&&edits[k][field]!==undefined) return edits[k][field];
+    const rec=recMap[k];
+    if(rec){
+      if(field==='status') return rec.status;
+      if(field==='ot_hours') return rec.ot_hours||'';
+      if(field==='note') return rec.note||'';
+    }
+    return field==='status'?'근무':'';
+  };
+  const setVal = (d,name,field,val) => {
+    const k=dateStr(d)+'_'+name;
+    setEdits(p=>({...p,[k]:{...(p[k]||{}),[field]:val}}));
+  };
+
+  const save = async () => {
+    setSaving(true); setMsg('');
+    const rows=[];
+    agents.forEach(a=>{ days.forEach(d=>{
+      const k=dateStr(d)+'_'+a.name;
+      if(!edits[k]) return;
+      rows.push({date:dateStr(d),agent_name:a.name, role:a.role||'상담원',
+        status:edits[k].status||(recMap[k]?.status||'근무'),
+        ot_hours:Number(edits[k].ot_hours??recMap[k]?.ot_hours??0)||0,
+        note:edits[k].note??recMap[k]?.note??''});
+    });});
+    if(!rows.length){setMsg('변경된 내용이 없습니다.');setSaving(false);return;}
+    const{error}=await sb.from('attendance').upsert(rows,{onConflict:'date,agent_name'});
+    if(error){setMsg('저장 실패: '+error.message);}
+    else{setMsg('저장되었습니다!');load();}
+    setSaving(false);
+  };
+
+  const summary = agents.map(a=>{
+    const recs=records.filter(r=>r.agent_name===a.name);
+    return {
+      name:a.name,
+      workDays: recs.filter(r=>r.status==='근무').length,
+      annual:   recs.filter(r=>r.status==='연차').length,
+      halfAM:   recs.filter(r=>r.status==='오전반차').length,
+      halfPM:   recs.filter(r=>r.status==='오후반차').length,
+      other:    recs.filter(r=>r.status==='기타').length,
+      totalOT:  recs.reduce((s,r)=>s+(Number(r.ot_hours)||0),0),
+    };
+  });
+
+  const prevMonth=()=>{if(month===1){setYear(y=>y-1);setMonth(12);}else setMonth(m=>m-1);};
+  const nextMonth=()=>{if(month===12){setYear(y=>y+1);setMonth(1);}else setMonth(m=>m+1);};
+
+  return (
+    <div className="section" style={{paddingTop:0}}>
+      <div>
+        <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:12,marginBottom:20}}>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <button className="btn-sm" onClick={prevMonth}>◀</button>
+            <span style={{fontSize:18,fontWeight:700,minWidth:100,textAlign:'center'}}>{year}년 {month}월</span>
+            <button className="btn-sm" onClick={nextMonth}>▶</button>
+          </div>
+          <div style={{display:'flex',gap:8}}>
+            <button onClick={()=>setTab('input')} style={{padding:'8px 18px',borderRadius:8,border:'none',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',background:tab==='input'?'var(--primary)':'var(--card)',color:tab==='input'?'#fff':'var(--sub)'}}>입력</button>
+            <button onClick={()=>setTab('summary')} style={{padding:'8px 18px',borderRadius:8,border:'none',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',background:tab==='summary'?'var(--primary)':'var(--card)',color:tab==='summary'?'#fff':'var(--sub)'}}>월별 집계</button>
+          </div>
+        </div>
+
+        {tab==='input'&&(
+          agents.length===0
+            ?<div className="empty-state">상담원 관리에서 먼저 상담원을 등록해주세요.</div>
+            :<div className="entry-card" style={{maxWidth:'100%'}}>
+              <div style={{display:'flex',gap:16,marginBottom:14,flexWrap:'wrap'}}>
+                {STATUS_LIST.map(s=><span key={s} style={{fontSize:12,color:STATUS_COLORS[s],fontWeight:600}}>● {s}</span>)}
+                <span style={{fontSize:12,color:'var(--sub)'}}>| OT: 시간 입력 (예: 1.5)</span>
+              </div>
+              <div style={{overflowX:'auto'}}>
+                <table style={{borderCollapse:'collapse',fontSize:12,minWidth:900}}>
+                  <thead><tr style={{background:'var(--bg)'}}>
+                    <th style={{padding:'8px 14px',textAlign:'left',color:'var(--sub)',fontWeight:700,borderBottom:'1px solid var(--border)',whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--bg)',zIndex:2}}>인원</th>
+                    {days.map(d=>{const dow=new Date(year,month-1,d).getDay();const isW=dow===0||dow===6;return(
+                      <th key={d} style={{padding:'6px 4px',textAlign:'center',color:isW?'var(--red)':'var(--sub)',fontWeight:700,borderBottom:'1px solid var(--border)',minWidth:54}}>
+                        {d}<br/><span style={{fontSize:10,fontWeight:400}}>{'일월화수목금토'[dow]}</span>
+                      </th>);})}
+                  </tr></thead>
+                  <tbody>{agents.map(a=>(
+                    <tr key={a.id} style={{borderBottom:'1px solid var(--border)'}}>
+                      <td style={{padding:'6px 14px',fontWeight:600,whiteSpace:'nowrap',position:'sticky',left:0,background:'var(--card)',zIndex:1}}>
+                         <div style={{display:'flex',alignItems:'center',gap:6}}>
+                           {a.name}
+                           <span style={a.role==='파트장'?{background:'rgba(246,173,9,.15)',color:'#F6AD09',padding:'1px 7px',borderRadius:10,fontSize:10,fontWeight:600}:{background:'rgba(42,71,141,.25)',color:'var(--accent)',padding:'1px 7px',borderRadius:10,fontSize:10,fontWeight:600}}>{a.role||'상담원'}</span>
+                         </div>
+                       </td>                      {days.map(d=>{
+                        const dow=new Date(year,month-1,d).getDay();
+                        const isW=dow===0||dow===6;
+                        const status=getVal(d,a.name,'status');
+                        const ot=getVal(d,a.name,'ot_hours');
+                        return(<td key={d} style={{padding:'3px',verticalAlign:'top',background:isW?'rgba(248,113,113,.05)':'transparent'}}>
+                          <select value={status} onChange={e=>setVal(d,a.name,'status',e.target.value)}
+                            style={{width:'100%',padding:'4px 2px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:5,color:STATUS_COLORS[status]||'var(--text)',fontSize:11,fontFamily:'inherit',outline:'none',fontWeight:600}}>
+                            {STATUS_LIST.map(s=><option key={s} value={s}>{s}</option>)}
+                          </select>
+                          <input type="text" inputMode="decimal" value={ot} onChange={e=>setVal(d,a.name,'ot_hours',e.target.value)} placeholder="OT"
+                            style={{width:'100%',marginTop:2,padding:'3px 4px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:5,color:'var(--yellow)',fontSize:11,fontFamily:'inherit',outline:'none',textAlign:'center'}}/>
+                          {status==='기타'&&<input type="text" value={getVal(d,a.name,'note')} onChange={e=>setVal(d,a.name,'note',e.target.value)} placeholder="내용"
+                            style={{width:'100%',marginTop:2,padding:'3px 4px',background:'var(--bg)',border:'1px solid var(--primary)',borderRadius:5,color:'var(--text)',fontSize:10,fontFamily:'inherit',outline:'none'}}/>}
+                        </td>);
+                      })}
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <div style={{display:'flex',alignItems:'center',gap:12,marginTop:16}}>
+                <button className="btn-save" onClick={save} disabled={saving}>
+                {saving?'저장 중...':'저장'}
+              </button>
+                {msg&&<span className={msg.includes('실패')?'error-msg':'success-msg'}>{msg}</span>}
+              </div>
+            </div>
+        )}
+
+        {tab==='summary'&&(
+          <div className="chart-card" style={{maxWidth:860}}>
+            <div className="chart-title">{year}년 {month}월 근태 집계</div>
+            {summary.length===0
+              ?<div className="empty-state">입력된 데이터가 없습니다.</div>
+              :<div className="table-wrap">
+                <table className="hist">
+                  <thead><tr><th>인원</th><th>근무일수</th><th>연차</th><th>오전반차</th><th>오후반차</th><th>기타</th><th>OT 합계</th></tr></thead>
+                  <tbody>{summary.map(s=>(
+                    <tr key={s.name}>
+                      <td style={{fontWeight:600}}>{s.name}</td>
+                      <td><span style={{color:'var(--green)',fontWeight:600}}>{s.workDays}일</span></td>
+                      <td>{s.annual>0?<span style={{color:'var(--red)',fontWeight:600}}>{s.annual}일</span>:'-'}</td>
+                      <td>{s.halfAM>0?<span style={{color:'var(--yellow)',fontWeight:600}}>{(s.halfAM*0.5).toFixed(1)}일</span>:'-'}</td>
+                      <td>{s.halfPM>0?<span style={{color:'var(--yellow)',fontWeight:600}}>{(s.halfPM*0.5).toFixed(1)}일</span>:'-'}</td>
+                      <td>{s.other>0?<span style={{color:'var(--sub)',fontWeight:600}}>{s.other}일</span>:'-'}</td>
+                      <td>{s.totalOT>0?<span style={{color:'var(--yellow)',fontWeight:600}}>{s.totalOT.toFixed(1)}h</span>:'-'}</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            }
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
+// ── AGENT MANAGEMENT ───────────────────────────
+function AgentMgmtPage() {
+  const [tab, setTab] = useState('agents');
+
+  const TabBtn = ({id, label}) => (
+    <button onClick={()=>setTab(id)} style={{padding:'9px 22px',borderRadius:8,border:'none',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',
+      background:tab===id?'var(--primary)':'var(--card)',color:tab===id?'#fff':'var(--sub)',transition:'all .15s'}}>
+      {label}
+    </button>
+  );
+
+  return (
+    <div>
+      <div className="page-header"><div><div className="page-title">인력 관리</div><div className="page-sub">인원 등록 및 근태 관리</div></div></div>
+      <div className="section" style={{paddingBottom:0}}>
+        <div style={{display:'flex',gap:8,marginBottom:24}}>
+          <TabBtn id="agents" label="인원 목록"/>
+          <TabBtn id="attendance" label="근태 관리"/>
+        </div>
+      </div>
+      {tab==='agents' && <AgentListTab/>}
+      {tab==='attendance' && <AttendancePage/>}
+    </div>
+  );
+}
+
+function AgentListTab() {
+  const [agents,setAgents]=useState([]); const [loading,setLoading]=useState(true);
+  const [newName,setNewName]=useState(''); const [newRole,setNewRole]=useState('상담원');
+  const [editId,setEditId]=useState(null); const [editName,setEditName]=useState(''); const [editRole,setEditRole]=useState('상담원');
+  const [msg,setMsg]=useState('');
+  const ROLES=['상담원','파트장'];
+  const roleStyle=r=>r==='파트장'
+    ?{background:'rgba(246,173,9,.15)',color:'#F6AD09',padding:'2px 8px',borderRadius:10,fontSize:10,fontWeight:600}
+    :{background:'rgba(42,71,141,.25)',color:'var(--accent)',padding:'2px 8px',borderRadius:10,fontSize:10,fontWeight:600};
+  const selStyle={padding:'4px 8px',background:'var(--bg)',border:'1px solid var(--border)',borderRadius:6,color:'var(--text)',fontSize:12,fontFamily:'inherit',outline:'none'};
+
+  const load=async()=>{ setLoading(true); const{data}=await sb.from('agents').select('*').order('sort_order').order('created_at'); setAgents(data||[]); setLoading(false); };
+  useEffect(()=>{load();},[]);
+
+  const add=async()=>{
+    if(!newName.trim()){setMsg('이름을 입력해주세요.');return;}
+    const{error}=await sb.from('agents').insert({name:newName.trim(),sort_order:agents.length,role:newRole});
+    if(error){setMsg('이미 등록된 이름이거나 오류가 발생했습니다.');return;}
+    setNewName(''); setNewRole('상담원'); setMsg(''); load();
+  };
+  const startEdit=(a)=>{setEditId(a.id);setEditName(a.name);setEditRole(a.role||'상담원');};
+  const saveEdit=async(id)=>{
+    if(!editName.trim())return;
+    await sb.from('agents').update({name:editName.trim(),role:editRole}).eq('id',id);
+    setEditId(null); load();
+  };
+  const del=async(a)=>{
+    if(!confirm(`'${a.name}' 을 삭제하시겠습니까?\n기존 데이터는 유지됩니다.`))return;
+    await sb.from('agents').delete().eq('id',a.id); load();
+  };
+
+  return (
+    <div className="section" style={{paddingTop:0}}>
+      <div className="entry-card" style={{maxWidth:560}}>
+        {loading?<div className="loading">불러오는 중...</div>:<>
+        <div className="entry-section-title">등록된 인원</div>
+        {agents.length===0?<div className="empty-state" style={{padding:'20px'}}>등록된 인원이 없습니다</div>:
+        <div className="agent-mgmt-list">
+          {agents.map((a,i)=>(
+            <div className="agent-mgmt-item" key={a.id}>
+              <div style={{width:24,color:'var(--sub)',fontSize:12}}>{i+1}</div>
+              {editId===a.id
+                ?<><input className="agent-mgmt-input" value={editName} onChange={e=>setEditName(e.target.value)} onKeyDown={e=>e.key==='Enter'&&saveEdit(a.id)} autoFocus/>
+                    <select value={editRole} onChange={e=>setEditRole(e.target.value)} style={selStyle}>
+                      {ROLES.map(r=><option key={r}>{r}</option>)}
+                    </select></>
+                :<><div className="agent-mgmt-name">{a.name}</div>
+                    <span style={roleStyle(a.role||'상담원')}>{a.role||'상담원'}</span></>
+              }
+              {editId===a.id
+                ?<><button className="btn-icon save" onClick={()=>saveEdit(a.id)}>저장</button><button className="btn-icon cancel" onClick={()=>setEditId(null)}>취소</button></>
+                :<><button className="btn-icon edit" onClick={()=>startEdit(a)}>수정</button><button className="btn-icon del" onClick={()=>del(a)}>삭제</button></>
+              }
+            </div>
+          ))}
+        </div>}
+        <div className="entry-section-title" style={{marginTop:24}}>인원 추가</div>
+        <div className="add-agent-row">
+          <input className="add-agent-input" value={newName} onChange={e=>setNewName(e.target.value)} placeholder="이름 입력" onKeyDown={e=>e.key==='Enter'&&add()}/>
+          <select value={newRole} onChange={e=>setNewRole(e.target.value)} style={selStyle}>
+            {ROLES.map(r=><option key={r}>{r}</option>)}
+          </select>
+          <button className="btn-add" onClick={add}>추가</button>
+        </div>
+        {msg&&<div className="error-msg" style={{marginTop:8,textAlign:'left'}}>{msg}</div>}
+        </>}
+      </div>
+    </div>
+  );
+}
+
+
+// ── DATA ENTRY ─────────────────────────────────
+const EMPTY_OPS = {date:'',inbound_calls:'',request_calls:'',answered_calls:'',ob_contacts:'',in_call_time:'',out_call_time:''};
+
+function EntryPage({ editDate, onSaved }) {
+  const [entryTab, setEntryTab] = useState('form');
+  const [ops,setOps]=useState({...EMPTY_OPS});
+  const [registeredAgents,setRegisteredAgents]=useState([]);
+  const [agentData,setAgentData]=useState({});
+  const [saving,setSaving]=useState(false); const [msg,setMsg]=useState('');
+  const [uploadMsg,setUploadMsg]=useState(''); const [uploading,setUploading]=useState(false);
+  const fileRef=useRef(null);
+
+  const loadAgents=async()=>{
+    const{data}=await sb.from('agents').select('*').order('sort_order').order('created_at');
+    setRegisteredAgents(data||[]);
+    const init={};
+    (data||[]).forEach(a=>{init[a.id]={answered:'',ob:'',board:'',chat:''};});
+    setAgentData(p=>{ const merged={...init}; Object.keys(p).forEach(k=>{if(merged[k])merged[k]=p[k];}); return merged; });
+  };
+
+  useEffect(()=>{
+    loadAgents();
+    if(!editDate)return;
+    (async()=>{
+      const[r1,r2]=await Promise.all([
+        sb.from('daily_ops').select('*').eq('date',editDate).single(),
+        sb.from('agent_daily_ops').select('*').eq('date',editDate),
+      ]);
+      if(r1.data)setOps(r1.data);
+      if(r2.data){
+        const d={};
+        r2.data.forEach(a=>{ d[a.agent_name]={answered:a.answered_calls,ob:a.ob_count,board:a.board_count,chat:a.chat_count}; });
+        setAgentData(p=>{
+          const merged={...p};
+          Object.keys(merged).forEach(id=>{
+            const agent=registeredAgents.find(a=>a.id===id);
+            if(agent&&d[agent.name])merged[id]=d[agent.name];
+          });
+          return merged;
+        });
+      }
+    })();
+  },[editDate]);
+
+  const setOpsF=(k,v)=>setOps(p=>({...p,[k]:v}));
+  const setAD=(id,k,v)=>setAgentData(p=>({...p,[id]:{...p[id],[k]:v}}));
+  const getAD=(id,k)=>agentData[id]?agentData[id][k]||'':'';
+
+  const autoRR=calcRR(ops);
+
+  const save=async()=>{
+    if(!ops.date){setMsg('날짜를 선택해주세요.');return;}
+    setSaving(true); setMsg('');
+    const opsPayload={date:ops.date,response_rate:Number(autoRR)||0,inbound_calls:Number(ops.inbound_calls)||0,request_calls:Number(ops.request_calls)||0,answered_calls:Number(ops.answered_calls)||0,ob_contacts:Number(ops.ob_contacts)||0,in_call_time:ops.in_call_time||'',out_call_time:ops.out_call_time||''};
+    const agentPayloads=registeredAgents.map(a=>({date:ops.date,agent_name:a.name,answered_calls:Number(getAD(a.id,'answered'))||0,ob_count:Number(getAD(a.id,'ob'))||0,board_count:Number(getAD(a.id,'board'))||0,chat_count:Number(getAD(a.id,'chat'))||0,uph:Number(calcUph({answered:getAD(a.id,'answered'),board:getAD(a.id,'board'),chat:getAD(a.id,'chat')}))||0}));
+    const[r1,r2]=await Promise.all([
+      sb.from('daily_ops').upsert(opsPayload,{onConflict:'date'}),
+      sb.from('agent_daily_ops').upsert(agentPayloads,{onConflict:'date,agent_name'}),
+    ]);
+    setSaving(false);
+    if(r1.error||r2.error){setMsg('저장 실패: '+(r1.error||r2.error).message);return;}
+    setMsg('저장되었습니다!');
+    if(onSaved)setTimeout(onSaved,800);
+  };
+
+  // 엑셀 양식 다운로드
+  const downloadTemplate=()=>{
+    const wb=XLSX.utils.book_new();
+    // Sheet1: 유선현황
+    const s1=[['날짜','인입호','요청호','응대호','OB컨택호','총IN통화시간','총OUT통화시간'],['2025-04-01','100','90','88','5','02:30:00','01:00:00']];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s1),'유선현황');
+    // Sheet2: 상담원별
+    const s2=[['날짜','상담원명','응대호','OB','게시판','채팅'],['2025-04-01','홍길동','22','1','8','5'],['2025-04-01','김철수','20','2','7','4']];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(s2),'상담원별');
+    XLSX.writeFile(wb,'운영데이터_양식.xlsx');
+  };
+
+  // 엑셀 업로드
+  const handleUpload=async(e)=>{
+    const file=e.target.files?.[0]; if(!file)return;
+    setUploading(true); setUploadMsg('');
+    try {
+      const buf=await file.arrayBuffer();
+      const wb=XLSX.read(buf,{type:'array'});
+
+      // Sheet1: 유선현황
+      const s1=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{defval:''});
+      const s2=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[1]],{defval:''});
+
+      // 날짜: 시리얼 번호 → UTC 기준 변환 (timezone 무관)
+      const parseDate=v=>{ 
+        if(!v) return '';
+        if(typeof v==='number'){
+          const ms=Math.round(v-25569)*86400*1000;
+          const d=new Date(ms);
+          return d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0')+'-'+String(d.getUTCDate()).padStart(2,'0');
+        }
+        if(v instanceof Date){
+          return v.getUTCFullYear()+'-'+String(v.getUTCMonth()+1).padStart(2,'0')+'-'+String(v.getUTCDate()).padStart(2,'0');
+        }
+        const s=String(v).trim();
+        if(/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+        return s;
+      };
+      // 시간: 소수 → HH:MM:SS
+      const parseTime=v=>{
+        if(!v) return '';
+        if(typeof v==='number'){
+          const totalSec=Math.round(v*86400);
+          const h=String(Math.floor(totalSec/3600)).padStart(2,'0');
+          const m=String(Math.floor((totalSec%3600)/60)).padStart(2,'0');
+          const s=String(totalSec%60).padStart(2,'0');
+          return h+':'+m+':'+s;
+        }
+        if(v instanceof Date){
+          return String(v.getUTCHours()).padStart(2,'0')+':'+String(v.getUTCMinutes()).padStart(2,'0')+':'+String(v.getUTCSeconds()).padStart(2,'0');
+        }
+        return String(v).trim();
+      };
+      const opsRows=s1.map(r=>({
+        date:parseDate(r['날짜']),
+        inbound_calls:Number(r['인입호'])||0, request_calls:Number(r['요청호'])||0,
+        answered_calls:Number(r['응대호'])||0, ob_contacts:Number(r['OB컨택호'])||0,
+        in_call_time:parseTime(r['총IN통화시간']), out_call_time:parseTime(r['총OUT통화시간']),
+        response_rate: r['요청호']?+((Number(r['응대호'])/Number(r['요청호']))*100).toFixed(1):0,
+      })).filter(r=>r.date&&r.date!=='undefined');
+
+      const agentRows=s2.map(r=>({
+        date:parseDate(r['날짜']), agent_name:String(r['상담원명']).trim(),
+        answered_calls:Number(r['응대호'])||0, ob_count:Number(r['OB'])||0,
+        board_count:Number(r['게시판'])||0, chat_count:Number(r['채팅'])||0,
+        uph:+((( Number(r['응대호'])||0)+(Number(r['게시판'])||0)+(Number(r['채팅'])||0))/8).toFixed(2),
+      })).filter(r=>r.date&&r.agent_name);
+
+      // 업로드 전 날짜 미리보기 확인
+      const previewDates=opsRows.map(r=>r.date).join('\n');
+      if(!confirm('아래 날짜로 업로드됩니다. 확인해주세요.\n\n'+previewDates+'\n\n총 '+opsRows.length+'일치 데이터')){
+        setUploading(false); return;
+      }
+      const[r1,r2]=await Promise.all([
+        sb.from('daily_ops').upsert(opsRows,{onConflict:'date'}),
+        sb.from('agent_daily_ops').upsert(agentRows,{onConflict:'date,agent_name'}),
+      ]);
+      const errs=[r1.error&&'유선현황: '+r1.error.message, r2.error&&'상담원별: '+r2.error.message].filter(Boolean);
+      if(errs.length)throw new Error(errs.join(' / '));
+      setUploadMsg('✅ 업로드 완료: 유선현황 '+opsRows.length+'건, 상담원 데이터 '+agentRows.length+'건');
+    } catch(err){ setUploadMsg('❌ 오류: '+err.message); }
+    setUploading(false); e.target.value='';
+  };
+
+  const sumAgents=key=>registeredAgents.reduce((s,a)=>s+(Number(getAD(a.id,key))||0),0);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div><div className="page-title">데이터 입력</div><div className="page-sub">일별 운영 현황 데이터 입력 및 내역 관리</div></div>
+      </div>
+      <div className="section" style={{paddingBottom:0}}>
+        <div style={{display:'flex',gap:8,marginBottom:16}}>
+          {['form','history'].map(t=>(
+            <button key={t} onClick={()=>setEntryTab(t)} style={{padding:'8px 18px',borderRadius:8,border:'none',fontFamily:'inherit',fontWeight:600,fontSize:13,cursor:'pointer',
+              background:entryTab===t?'var(--primary)':'var(--card)',color:entryTab===t?'#fff':'var(--sub)'}}>
+              {t==='form'?(editDate?'데이터 수정':'데이터 입력'):'데이터 내역'}
+            </button>
+          ))}
+        </div>
+      </div>
+      {entryTab==='history'&&<EntryHistorySection onEdit={d=>{setEditDate(d);setEntryTab('form');}}/>}
+      {entryTab==='form'&&<div className="section">
+        <div className="entry-card">
+
+          {/* 엑셀 업로드 */}
+          <div className="entry-section-title">엑셀 일괄 업로드</div>
+          <div className="upload-area">
+            <div>
+              <button className="btn-upload" onClick={()=>fileRef.current?.click()} disabled={uploading}>{uploading?'업로드 중...':'📂 엑셀 파일 업로드'}</button>
+              <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:'none'}} onChange={handleUpload}/>
+            </div>
+            <button className="btn-template" onClick={downloadTemplate}>⬇ 양식 다운로드</button>
+            <div className="upload-desc">
+              시트1 <b>유선현황</b>: 날짜/인입호/요청호/응대호/OB컨택호/총IN통화시간/총OUT통화시간<br/>
+              시트2 <b>상담원별</b>: 날짜/상담원명/응대호/OB/게시판/채팅
+            </div>
+          </div>
+          {uploadMsg&&<div className={`upload-result ${uploadMsg.startsWith('✅')?'ok':'err'}`}>{uploadMsg}</div>}
+
+          {/* 날짜 정보 */}
+          <div className="entry-section-title">날짜 정보</div>
+          <div className="entry-grid">
+            <div className="entry-field"><label>날짜</label><input type="date" value={ops.date||''} onChange={e=>setOpsF('date',e.target.value)}/></div>
+          </div>
+
+          {/* 유선 현황 */}
+          <div className="entry-section-title">유선 현황</div>
+          <div className="entry-grid-3">
+            {[{label:'인입호',k:'inbound_calls'},{label:'요청호',k:'request_calls'},{label:'응대호',k:'answered_calls'},{label:'OB컨택호',k:'ob_contacts'},{label:'총 IN 통화시간',k:'in_call_time',ph:'예: 02:30:00'},{label:'총 OUT 통화시간',k:'out_call_time',ph:'예: 01:15:00'}].map(f=>(
+              <div className="entry-field" key={f.k}><label>{f.label}</label><input type="text" inputMode="numeric" value={ops[f.k]||''} onChange={e=>setOpsF(f.k,e.target.value)} placeholder={f.ph||''}/></div>
+            ))}
+            <div className="entry-field"><label>응대율 (자동계산)</label><input type="text" value={autoRR?autoRR+'%':'요청호/응대호 입력 시 자동계산'} readOnly/></div>
+          </div>
+
+          {/* 상담원별 처리 현황 */}
+          <div className="entry-section-title">상담원별 처리 현황</div>
+          {registeredAgents.length===0
+            ? <div style={{color:'var(--sub)',fontSize:13,padding:'12px 0'}}>등록된 상담원이 없습니다. 사이드바의 <b>상담원 관리</b>에서 먼저 등록해주세요.</div>
+            : <>
+            <div style={{overflowX:'auto'}}>
+              <table className="agent-table">
+                <thead><tr>
+                  <th style={{minWidth:100}}>상담원명</th>
+                  <th style={{minWidth:75}}>응대호</th>
+                  <th style={{minWidth:75}}>OB</th>
+                  <th style={{minWidth:75}}>게시판</th>
+                  <th style={{minWidth:75}}>채팅</th>
+                  <th style={{minWidth:90}}>UPH (자동)</th>
+                </tr></thead>
+                <tbody>
+                  {registeredAgents.map(a=>(
+                    <tr key={a.id}>
+                      <td className="agent-name-cell">{a.name}</td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'answered')} onChange={e=>setAD(a.id,'answered',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'ob')} onChange={e=>setAD(a.id,'ob',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'board')} onChange={e=>setAD(a.id,'board',e.target.value)}/></td>
+                      <td><input type="text" inputMode="numeric" value={getAD(a.id,'chat')} onChange={e=>setAD(a.id,'chat',e.target.value)}/></td>
+                      <td><input type="text" value={calcUph({answered:getAD(a.id,'answered'),board:getAD(a.id,'board'),chat:getAD(a.id,'chat')})||'-'} readOnly/></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="agent-summary">
+              <div>응대호 합계: <span>{sumAgents('answered')}</span></div>
+              <div>OB 합계: <span>{sumAgents('ob')}</span></div>
+              <div>게시판 합계: <span>{sumAgents('board')}</span></div>
+              <div>채팅 합계: <span>{sumAgents('chat')}</span></div>
+            </div>
+            </>
+          }
+
+          <div className="entry-actions">
+            <button className="btn-save" onClick={save} disabled={saving}>{saving?'저장 중...':'저장'}</button>
+            {editDate&&<button className="btn-cancel" onClick={onSaved}>취소</button>}
+          </div>
+          {msg&&<div className={msg.includes('실패')?'error-msg':'success-msg'} style={{marginTop:10}}>{msg}</div>}
+        </div>
+      </div>}
+    </div>
+  );
+}
+
+// ── ENTRY HISTORY SECTION ──────────────────────
+function EntryHistorySection({ onEdit }) {
+  const [opsMap,setOpsMap]=useState({});
+  const [agents,setAgents]=useState([]);
+  const [allDates,setAllDates]=useState([]);
+  const [filtered,setFiltered]=useState([]);
+  const [loading,setLoading]=useState(true);
+  const [filterFrom,setFilterFrom]=useState('');
+  const [filterTo,setFilterTo]=useState('');
+  const [checkedDates,setCheckedDates]=useState(new Set());
+
+  const load=async()=>{
+    setLoading(true);
+    const[r1,r2]=await Promise.all([sb.from('daily_ops').select('*'),sb.from('agent_daily_ops').select('*')]);
+    const ops=r1.data||[]; const ag=r2.data||[];
+    const map={}; ops.forEach(r=>{map[r.date]=r;});
+    const dates=[...new Set([...ops.map(r=>r.date),...ag.map(r=>r.date)])].sort().reverse();
+    setOpsMap(map); setAgents(ag); setAllDates(dates); setFiltered(dates); setLoading(false);
+  };
+  useEffect(()=>{load();},[]);
+
+  const applyFilter=()=>{
+    let d=[...allDates];
+    if(filterFrom) d=d.filter(date=>date>=filterFrom);
+    if(filterTo)   d=d.filter(date=>date<=filterTo);
+    setFiltered(d); setCheckedDates(new Set());
+  };
+  const resetFilter=()=>{
+    setFilterFrom(''); setFilterTo(''); setFiltered(allDates); setCheckedDates(new Set());
+  };
+
+  const del=async date=>{
+    if(!confirm(`${date} 데이터를 삭제하시겠습니까?`))return;
+    await Promise.all([sb.from('daily_ops').delete().eq('date',date),sb.from('agent_daily_ops').delete().eq('date',date)]);
+    load();
+  };
+  const bulkDel=async()=>{
+    if(!confirm(`${checkedDates.size}개 데이터를 삭제하시겠습니까?`))return;
+    const ids=[...checkedDates];
+    await Promise.all(ids.flatMap(date=>[
+      sb.from('daily_ops').delete().eq('date',date),
+      sb.from('agent_daily_ops').delete().eq('date',date),
+    ]));
+    setCheckedDates(new Set()); load();
+  };
+
+  const inputStyle={padding:'8px 12px',background:'var(--card)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text)',fontSize:13,fontFamily:'inherit',outline:'none'};
+
+  return (
+    <div className="section" style={{paddingTop:0}}>
+      {/* 기간 검색 */}
+      <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',marginBottom:14}}>
+        <span style={{fontSize:12,color:'var(--sub)'}}>기간</span>
+        <input type="date" value={filterFrom} onChange={e=>setFilterFrom(e.target.value)} style={inputStyle}/>
+        <span style={{color:'var(--sub)'}}>~</span>
+        <input type="date" value={filterTo} onChange={e=>setFilterTo(e.target.value)} style={inputStyle}/>
+        <button className="btn-filter" onClick={applyFilter}>조회</button>
+        <button className="btn-sm" onClick={resetFilter}>초기화</button>
+      </div>
+
+      {/* 선택 액션 바 */}
+      {checkedDates.size>0&&(
+        <div style={{display:'flex',alignItems:'center',gap:12,padding:'10px 14px',background:'rgba(248,113,113,.07)',border:'1px solid rgba(248,113,113,.2)',borderRadius:8,marginBottom:12}}>
+          <span style={{fontSize:13,color:'var(--red)',fontWeight:600}}>{checkedDates.size}개 선택됨</span>
+          <button onClick={bulkDel} style={{padding:'5px 14px',background:'#a01a1a',border:'1px solid #c82020',borderRadius:6,color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer',fontFamily:'inherit'}}>선택 삭제</button>
+          <button onClick={()=>setCheckedDates(new Set())} style={{padding:'5px 12px',background:'transparent',border:'1px solid var(--border)',borderRadius:6,color:'var(--sub)',fontSize:12,cursor:'pointer',fontFamily:'inherit'}}>선택 해제</button>
+        </div>
+      )}
+
+      <div className="chart-card">
+        {loading?<div className="loading">불러오는 중...</div>:filtered.length===0?<div className="empty-state">데이터가 없습니다</div>:
+        <div className="table-wrap">
+          <table className="hist">
+            <thead><tr>
+              <th style={{width:36,textAlign:'center'}}>
+                <input type="checkbox"
+                  checked={filtered.length>0&&filtered.every(d=>checkedDates.has(d))}
+                  onChange={e=>{if(e.target.checked)setCheckedDates(new Set(filtered));else setCheckedDates(new Set());}}
+                  style={{cursor:'pointer',width:14,height:14}}/>
+              </th>
+              <th>날짜</th><th>응대율</th><th>인입호</th><th>요청호</th><th>응대호(유선)</th><th>인원</th><th>응대호 합계</th><th>관리</th>
+            </tr></thead>
+            <tbody>{filtered.map(date=>{
+              const r=opsMap[date]||{};
+              const da=agents.filter(a=>a.date===date);
+              const tot=da.reduce((s,a)=>s+(Number(a.answered_calls)||0),0);
+              return (
+                <tr key={date} style={{background:checkedDates.has(date)?'rgba(248,113,113,.05)':''}}>
+                  <td style={{textAlign:'center'}}>
+                    <input type="checkbox" checked={checkedDates.has(date)}
+                      onChange={e=>{const s=new Set(checkedDates);e.target.checked?s.add(date):s.delete(date);setCheckedDates(s);}}
+                      style={{cursor:'pointer',width:14,height:14}}/>
+                  </td>
+                  <td>{date}</td>
+                  <td>{r.response_rate!=null?<span className={`badge ${Number(r.response_rate)>=90?'badge-green':'badge-red'}`}>{fmtPct(r.response_rate)}</span>:<span style={{color:'var(--sub)',fontSize:11}}>-</span>}</td>
+                  <td>{r.inbound_calls??'-'}</td><td>{r.request_calls??'-'}</td><td>{r.answered_calls??'-'}</td>
+                  <td>{da.map(a=><span key={a.id} className="agent-badge">{a.agent_name}</span>)}</td>
+                  <td>{tot||'-'}</td>
+                  <td>
+                    <button className="btn-edit" onClick={()=>onEdit(date)}>수정</button>
+                    <button className="btn-delete" onClick={()=>del(date)}>삭제</button>
+                  </td>
+                </tr>
+              );
+            })}</tbody>
+          </table>
+        </div>}
+      </div>
+    </div>
+  );
+}
+
+
+</script>
+</body>
+</html>
